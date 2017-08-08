@@ -1,5 +1,10 @@
 package com.innvo.web.rest;
 
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.codahale.metrics.annotation.Timed;
 import com.innvo.domain.Asset;
 
@@ -22,6 +27,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -161,22 +168,42 @@ public class AssetResource {
     /**
      * 
      * @throws KettleException
+     * @throws IOException 
      */
     @GetMapping("/runKettle")
     @Timed
-    public void runKettle() throws KettleException {
-        log.debug("REST request to run kettle file");
-        
-        KettleEnvironment.init();
-        URL ktrUrl = AssetResource.class.getClassLoader().getResource("addtoasset.ktr");
-        TransMeta transMeta = new TransMeta(ktrUrl.getFile());
-        Trans trans = new Trans(transMeta);
-        trans.execute(null);
-        trans.waitUntilFinished();
-        if (trans.getErrors() > 0) {
-            log.debug( "Error in Executing transformation" );
-}
-       
-      
+    public void runKettle() throws IOException {
+    	  log.debug("REST request to run kettle file");
+          
+          String accessKey= "AKIAIC2M74X5UIUMUZFA";
+          String secretKey= "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";
+          
+          AWSCredentials credentials = new BasicAWSCredentials(accessKey,secretKey);
+  		System.out.println("11111111111111111111111111111111111111111111111111111111");
+  	     String bucketName = "innvo-pentaho/transformations";  
+           String key = "transformation1.ktr"; 
+        System.out.println("22222222222222222222*******22222222222222222222222222222222222");
+
+   		 File tempFile = File.createTempFile("transformation1", ".ktr"); 
+   		 System.out.println("333333333333333333333333333333333333333333333333333333333333");
+   		 AmazonS3 AMAZON_S3 = new AmazonS3Client(credentials);
+           System.out.println("4444444444444444444444444///4444444444444444444444444444444444444444444444444");
+           AMAZON_S3.getObject(new GetObjectRequest(bucketName, key), tempFile); 
+          
+           System.out.println("555555555555555555555555555555555555555555555555555555555");
+           System.out.println(tempFile.getAbsolutePath());
+           System.out.println("6666666666666666666777777---7777777766666666666666666666666666666666");
+           try{
+          KettleEnvironment.init();
+        //  URL ktrUrl = PipelineResource.class.getClassLoader().getResource(tempFile.getAbsolutePath());
+          TransMeta transMeta = new TransMeta(tempFile.getAbsolutePath());
+          Trans trans = new Trans(transMeta);
+          trans.execute(new String[]{});
+          trans.waitUntilFinished();
+           }catch (KettleException e) {
+        	   e.getSuperMessage();
+        	   System.out.println("1111111111111111111111111111111111111");
+			e.printStackTrace();
+		}
     }
 }
